@@ -12,11 +12,6 @@
 // arithmetic you'd do on paper, and there are
 // some comments in the code below about that.
 
-// For more on division see also:
-// Brinch Hansen, Multiple-Length Division Revisited,
-// 1994
-// http://brinch-hansen.net/papers/1994b.pdf
-
 
 using System;
 using System.Text;
@@ -27,132 +22,88 @@ namespace RSACrypto
 {
   class IntegerMath
   {
+  private MainForm MForm;
+  internal Division Divider;
   private long[] SignedD; // Signed digits for use in subtraction.
   private ulong[,] M; // Scratch pad, just like you would do on paper.
   private ulong[] Scratch; // Scratch pad, just like you would do on paper.
-  // I don't want to create any of these numbers inside a loop
-  // so they are created just once here.
-  private Integer ToDivide;
-  private Integer Quotient;
-  private Integer Remainder;
-  private Integer ToDivideKeep;
-  private Integer DivideByKeep;
-  private Integer DivideBy;
-  private Integer TestForDivide1;
-  private Integer TempAdd1;
-  private Integer TempAdd2;
-  private Integer TempSub1;
-  private Integer TempSub2;
-  private Integer GcdX;
-  private Integer GcdY;
-  private Integer TempX;
-  private Integer TempY;
-  private Integer TestForModInverse1;
-  private Integer TestForModInverse2;
-  private Integer U0;
-  private Integer U1;
-  private Integer U2;
-  private Integer V0;
-  private Integer V1;
-  private Integer V2;
-  private Integer T0;
-  private Integer T1;
-  private Integer T2;
-  private Integer SubtractTemp1;
-  private Integer SubtractTemp2;
-  private Integer Fermat1;
-  private Integer Fermat2;
-  private Integer TestFermat;
-  private Integer TempEuclid1;
-  private Integer TempEuclid2;
-  private Integer TempEuclid3;
-  private Integer TestForBits;
-  private Integer OriginalValue;
-  private Integer TestForSquareRoot;
-  private Integer SqrtXPartTest1;
-  private Integer SqrtXPartTest2;
-  private Integer SqrtXPartDiff;
-  private Integer SqrtXPartR2;
-  private Integer SqrtXPartTwoB;
+  // I don't want to create any of these numbers
+  // inside a loop so they are created just once here.
+  private Integer ToDivide = new Integer();
+  private Integer Quotient = new Integer();
+  private Integer Remainder = new Integer();
+  private Integer TempAdd1 = new Integer();
+  private Integer TempAdd2 = new Integer();
+  private Integer TempSub1 = new Integer();
+  private Integer TempSub2 = new Integer();
+  private Integer GcdX = new Integer();
+  private Integer GcdY = new Integer();
+  private Integer TestForModInverse1 = new Integer();
+  private Integer TestForModInverse2 = new Integer();
+  private Integer U0 = new Integer();
+  private Integer U1 = new Integer();
+  private Integer U2 = new Integer();
+  private Integer V0 = new Integer();
+  private Integer V1 = new Integer();
+  private Integer V2 = new Integer();
+  private Integer T0 = new Integer();
+  private Integer T1 = new Integer();
+  private Integer T2 = new Integer();
+  private Integer SubtractTemp1 = new Integer();
+  private Integer SubtractTemp2 = new Integer();
+  private Integer Fermat1 = new Integer();
+  private Integer Fermat2 = new Integer();
+  private Integer TestFermat = new Integer();
+  private Integer TempEuclid1 = new Integer();
+  private Integer TempEuclid2 = new Integer();
+  private Integer TempEuclid3 = new Integer();
+  private Integer TestForBits = new Integer();
+  private Integer TestForSquareRoot = new Integer();
+  private Integer SqrtXPartTest1 = new Integer();
+  private Integer SqrtXPartTest2 = new Integer();
+  private Integer SqrtXPartDiff = new Integer();
+  private Integer SqrtXPartR2 = new Integer();
+  private Integer SqrtXPartTwoB = new Integer();
   private uint[] PrimeArray;
-  internal const int PrimeArrayLength = 1024 * 32;
-  private string StatusString = "";
+  internal const int PrimeArrayLength = 1024 * 16;
   private bool Cancelled = false;
   private Integer[] GeneralBaseArray;
-  private Integer CurrentModReductionBase;
-  private Integer TempForModPower;
-  private Integer TestForModPower;
-  private Integer TestForModReduction2;
-  private Integer TestForModReduction2ForModPower;
-  private Integer XForModPower;
-  private Integer ExponentCopy;
-  private Integer AccumulateBase;
+  private Integer CurrentModReductionBase = new Integer();
+  private Integer TempForModPower = new Integer();
+  private Integer TestForModPower = new Integer();
+  private Integer TestForModReduction2 = new Integer();
+  private Integer TestForModReduction2ForModPower = new Integer();
+  private Integer XForModPower = new Integer();
+  private Integer ExponentCopy = new Integer();
+  private Integer AccumulateBase = new Integer();
   private int MaxModPowerIndex = 0;
-// private uint GBaseSmallModulus = 0;
 
 
 
-  internal IntegerMath()
+  private IntegerMath()
     {
+    }
+
+
+  internal IntegerMath( MainForm UseForm )
+    {
+    MForm = UseForm;
+    Divider = new Division( MForm, this );
     SignedD = new long[Integer.DigitArraySize];
     M = new ulong[Integer.DigitArraySize, Integer.DigitArraySize];
     Scratch = new ulong[Integer.DigitArraySize];
-    // These numbers are created ahead of time so that they don't have
-    // to be created over and over again within a loop where the
-    // calculations are being done.
-    ToDivide = new Integer();
-    Quotient = new Integer();
-    Remainder = new Integer();
-    ToDivideKeep = new Integer();
-    DivideByKeep = new Integer();
-    DivideBy = new Integer();
-    TestForDivide1 = new Integer();
-    TempAdd1 = new Integer();
-    TempAdd2 = new Integer();
-    TempSub1 = new Integer();
-    TempSub2 = new Integer();
-    TempX = new Integer();
-    TempY = new Integer();
-    GcdX = new Integer();
-    GcdY = new Integer();
-    TestForModInverse1 = new Integer();
-    TestForModInverse2 = new Integer();
-    U0 = new Integer();
-    U1 = new Integer();
-    U2 = new Integer();
-    V0 = new Integer();
-    V1 = new Integer();
-    V2 = new Integer();
-    T0 = new Integer();
-    T1 = new Integer();
-    T2 = new Integer();
-    SubtractTemp1 = new Integer();
-    SubtractTemp2 = new Integer();
-    Fermat1 = new Integer();
-    Fermat2 = new Integer();
-    TestFermat = new Integer();
-    TempEuclid1 = new Integer();
-    TempEuclid2 = new Integer();
-    TempEuclid3 = new Integer();
-    TestForBits = new Integer();
-    OriginalValue = new Integer();
-    TestForSquareRoot = new Integer();
-    SqrtXPartTest1 = new Integer();
-    SqrtXPartTest2 = new Integer();
-    SqrtXPartDiff = new Integer();
-    SqrtXPartR2 = new Integer();
-    SqrtXPartTwoB = new Integer();
-    XForModPower = new Integer();
-    ExponentCopy = new Integer();
-    TempForModPower = new Integer();
-    TestForModPower = new Integer();
-    TestForModReduction2 = new Integer();
-    TestForModReduction2ForModPower = new Integer();
-    AccumulateBase = new Integer();
-    TestForModInverse1 = new Integer();
-    CurrentModReductionBase = new Integer();
 
     MakePrimeArray();
+    }
+
+
+
+  private void ShowStatus( string ToShow )
+    {
+    if( MForm == null )
+      return;
+
+    MForm.ShowStatus( ToShow );
     }
 
 
@@ -160,15 +111,6 @@ namespace RSACrypto
   internal void SetCancelled( bool SetTo )
     {
     Cancelled = SetTo;
-    }
-
-
-
-  internal string GetStatusString()
-    {
-    string Result = StatusString;
-    StatusString = "";
-    return Result;
     }
 
 
@@ -264,7 +206,7 @@ namespace RSACrypto
 
     for( int Count = 1; Count < PrimeArrayLength; Count++ )
       {
-      if( 0 == GetMod32( ToTest, PrimeArray[Count] ))
+      if( 0 == Divider.GetMod32( ToTest, PrimeArray[Count] ))
         return PrimeArray[Count];
 
       }
@@ -778,301 +720,6 @@ namespace RSACrypto
 
 
 
-  private bool ShortDivide( Integer ToDivide,
-                            Integer DivideBy,
-                            Integer Quotient,
-                            Integer Remainder )
-    {
-    Quotient.Copy( ToDivide );
-    // DivideBy has an Index of zero:
-    ulong DivideByU = DivideBy.GetD( 0 );
-    ulong RemainderU = 0;
-    // Get the first one set up.
-    if( DivideByU > Quotient.GetD( Quotient.GetIndex()) )
-      {
-      Quotient.SetD( Quotient.GetIndex(), 0 );
-      }
-    else
-      {
-      ulong OneDigit = Quotient.GetD( Quotient.GetIndex() );
-      Quotient.SetD( Quotient.GetIndex(), OneDigit / DivideByU );
-      RemainderU = OneDigit % DivideByU;
-      ToDivide.SetD( ToDivide.GetIndex(), RemainderU );
-      }
-
-    // Now do the rest.
-    for( int Count = Quotient.GetIndex(); Count >= 1; Count-- )
-      {
-      ulong TwoDigits = ToDivide.GetD( Count );
-      TwoDigits <<= 32;
-      TwoDigits |= ToDivide.GetD( Count - 1 );
-      Quotient.SetD( Count - 1, TwoDigits / DivideByU );
-      RemainderU = TwoDigits % DivideByU;
-      ToDivide.SetD( Count, 0 );
-      ToDivide.SetD( Count - 1, RemainderU ); // What's left to divide.
-      }
-
-    // Set the index for the quotient.
-    // The quotient would have to be at least 1 here,
-    // so it will find where to set the index.
-    for( int Count = Quotient.GetIndex(); Count >= 0; Count-- )
-      {
-      if( Quotient.GetD( Count ) != 0 )
-        {
-        Quotient.SetIndex( Count );
-        break;
-        }
-      }
-
-    Remainder.SetD( 0, RemainderU );
-    Remainder.SetIndex( 0 );
-    if( RemainderU == 0 )
-      return true;
-    else
-      return false;
-
-    }
-
-
-
-  // This is a variation on ShortDivide that returns the remainder.
-  // Also, DivideBy is a ulong.
-  internal ulong ShortDivideRem( Integer ToDivideOriginal,
-                               ulong DivideByU,
-                               Integer Quotient )
-    {
-    if( ToDivideOriginal.IsULong())
-      {
-      ulong ToDiv = ToDivideOriginal.GetAsULong();
-      ulong Q = ToDiv / DivideByU;
-      Quotient.SetFromULong( Q );
-      return ToDiv % DivideByU;
-      }
-
-    ToDivide.Copy( ToDivideOriginal );
-    Quotient.Copy( ToDivide );
-    ulong RemainderU = 0;
-    if( DivideByU > Quotient.GetD( Quotient.GetIndex() ))
-      {
-      Quotient.SetD( Quotient.GetIndex(), 0 );
-      }
-    else
-      {
-      ulong OneDigit = Quotient.GetD( Quotient.GetIndex() );
-      Quotient.SetD( Quotient.GetIndex(), OneDigit / DivideByU );
-      RemainderU = OneDigit % DivideByU;
-      ToDivide.SetD( ToDivide.GetIndex(), RemainderU );
-      }
-
-    for( int Count = Quotient.GetIndex(); Count >= 1; Count-- )
-      {
-      ulong TwoDigits = ToDivide.GetD( Count );
-      TwoDigits <<= 32;
-      TwoDigits |= ToDivide.GetD( Count - 1 );
-      Quotient.SetD( Count - 1, TwoDigits / DivideByU );
-      RemainderU = TwoDigits % DivideByU;
-      ToDivide.SetD( Count, 0 );
-      ToDivide.SetD( Count - 1, RemainderU );
-      }
-
-    for( int Count = Quotient.GetIndex(); Count >= 0; Count-- )
-      {
-      if( Quotient.GetD( Count ) != 0 )
-        {
-        Quotient.SetIndex( Count );
-        break;
-        }
-      }
-
-    return RemainderU;
-    }
-
-
-
-  // This is a variation on ShortDivide() to get the remainder only.
-  internal ulong GetMod32( Integer ToDivideOriginal, ulong DivideByU )
-    {
-    if( (DivideByU >> 32) != 0 )
-      throw( new Exception( "GetMod32: (DivideByU >> 32) != 0." ));
-
-    // If this is _equal_ to a small prime it would return zero.
-    if( ToDivideOriginal.IsULong())
-      {
-      ulong Result = ToDivideOriginal.GetAsULong();
-      return Result % DivideByU;
-      }
-
-    ToDivide.Copy( ToDivideOriginal );
-    ulong RemainderU = 0;
-    if( DivideByU <= ToDivide.GetD( ToDivide.GetIndex() ))
-      {
-      ulong OneDigit = ToDivide.GetD( ToDivide.GetIndex() );
-      RemainderU = OneDigit % DivideByU;
-      ToDivide.SetD( ToDivide.GetIndex(), RemainderU );
-      }
-
-    for( int Count = ToDivide.GetIndex(); Count >= 1; Count-- )
-      {
-      ulong TwoDigits = ToDivide.GetD( Count );
-      TwoDigits <<= 32;
-      TwoDigits |= ToDivide.GetD( Count - 1 );
-      RemainderU = TwoDigits % DivideByU;
-      ToDivide.SetD( Count, 0 );
-      ToDivide.SetD( Count - 1, RemainderU );
-      }
-
-    return RemainderU;
-    }
-
-
-
-   /*
-  private bool EquivalentMod()
-    {
-    // The compiler does a compile-time check on these constants
-    // and it finds unreachable code because they are not false.
-    const uint Test1 = ((2 * 10) + 3) % 15;
-    const uint Test2 = (((2 * 10) % 15) + (3 % 15)) % 15;
-    const uint Test3 = ((((2 % 15) * (10 % 15)) % 15) + (3 % 15)) % 15;
-    if( Test1 == Test2 )
-      {
-      if( Test2 == Test3 )
-        return true;
-      else
-        return false; // Unreachable code.
-
-      }
-    else
-      return false; // Unreachable code.
-
-    // The compiler only tells you about the first unreachable code it
-    // finds.  Comment out earlier ones to make it show later ones.
-    }
-    */
-
-
-
-  private ulong GetMod64FromTwoULongs( ulong P1, ulong P0, ulong Divisor64 )
-    {
-    if( Divisor64 <= 0xFFFFFFFF )
-      throw( new Exception( "GetMod64FromTwoULongs Divisor64 <= 0xFFFFFFFF" ));
-
-    // This is never shifted more than 12 bits, so check to make sure there's
-    // room to shift it.
-    if( (Divisor64 >> 52) != 0 )
-      throw( new Exception( "Divisor64 is too big in GetMod64FromTwoULongs." ));
-
-    if( P1 == 0 )
-      return P0 % Divisor64;
-
-    //////////////////////////////////////////////
-    // R ~ (a*b) mod m
-    // R ~ ((a mod m) * (b mod m)) mod m
-    // (P1 * 2^64) + P0 is what the number is.
-    ulong Part1 = P1 % Divisor64;
-    if( (Divisor64 >> 40) == 0 )
-      {
-      // Then this can be done 24 bits at a time.
-      Part1 <<= 24;  // Times 2^24
-      Part1 = Part1 % Divisor64;
-      Part1 <<= 24;  //  48
-      Part1 = Part1 % Divisor64;
-      Part1 <<= 16;  // Brings it to 64
-      Part1 = Part1 % Divisor64;
-      }
-    else
-      {
-      Part1 <<= 12;  // Times 2^12
-      Part1 = Part1 % Divisor64;
-      Part1 <<= 12;  // Times 2^12
-      Part1 = Part1 % Divisor64;
-      Part1 <<= 12;  // Times 2^12
-      Part1 = Part1 % Divisor64;
-      Part1 <<= 12;  // Times 2^12 Brings it to 48.
-      Part1 = Part1 % Divisor64;
-      Part1 <<= 8;  // Times 2^8
-      Part1 = Part1 % Divisor64;
-      Part1 <<= 8;  // Times 2^8 Brings it to 64.
-      Part1 = Part1 % Divisor64;
-      }
-
-    // All of the above was just to get the P1 part of it, so now add P0:
-    return (Part1 + P0) % Divisor64;
-    }
-
-
-
-  internal ulong GetMod64( Integer ToDivideOriginal, ulong DivideBy )
-    {
-    if( ToDivideOriginal.IsULong())
-      return ToDivideOriginal.GetAsULong() % DivideBy;
-
-    ToDivide.Copy( ToDivideOriginal );
-    ulong Digit1;
-    ulong Digit0;
-    ulong Remainder;
-    if( ToDivide.GetIndex() == 2 )
-      {
-      Digit1 = ToDivide.GetD( 2 );
-      Digit0 = ToDivide.GetD( 1 ) << 32;
-      Digit0 |= ToDivide.GetD( 0 );
-      return GetMod64FromTwoULongs( Digit1, Digit0, DivideBy );
-      }
-
-    if( ToDivide.GetIndex() == 3 )
-      {
-      Digit1 = ToDivide.GetD( 3 ) << 32;
-      Digit1 |= ToDivide.GetD( 2 );
-      Digit0 = ToDivide.GetD( 1 ) << 32;
-      Digit0 |= ToDivide.GetD( 0 );
-      return GetMod64FromTwoULongs( Digit1, Digit0, DivideBy );
-      }
-
-    int Where = ToDivide.GetIndex();
-    while( true )
-      {
-      if( Where <= 3 )
-        {
-        if( Where < 2 ) // This can't happen.
-          throw( new Exception( "GetMod64(): Where < 2." ));
-
-        if( Where == 2 )
-          {
-          Digit1 = ToDivide.GetD( 2 );
-          Digit0 = ToDivide.GetD( 1 ) << 32;
-          Digit0 |= ToDivide.GetD( 0 );
-          return GetMod64FromTwoULongs( Digit1, Digit0, DivideBy );
-          }
-
-        if( Where == 3 )
-          {
-          Digit1 = ToDivide.GetD( 3 ) << 32;
-          Digit1 |= ToDivide.GetD( 2 );
-          Digit0 = ToDivide.GetD( 1 ) << 32;
-          Digit0 |= ToDivide.GetD( 0 );
-          return GetMod64FromTwoULongs( Digit1, Digit0, DivideBy );
-          }
-        }
-      else
-        {
-        // The index is bigger than 3.
-        // This part would get called at least once.
-        Digit1 = ToDivide.GetD( Where ) << 32;
-        Digit1 |= ToDivide.GetD( Where - 1 );
-        Digit0 = ToDivide.GetD( Where - 2 ) << 32;
-        Digit0 |= ToDivide.GetD( Where - 3 );
-        Remainder = GetMod64FromTwoULongs( Digit1, Digit0, DivideBy );
-        ToDivide.SetD( Where, 0 );
-        ToDivide.SetD( Where - 1, 0 );
-        ToDivide.SetD( Where - 2, Remainder >> 32 );
-        ToDivide.SetD( Where - 3, Remainder & 0xFFFFFFFF );
-        }
-
-      Where -= 2;
-      }
-    }
-
-
 
   internal void SetFromString( Integer Result, string InString )
     {
@@ -1120,7 +767,7 @@ namespace RSACrypto
     int CommaCount = 0;
     while( !ToDivide.IsZero())
       {
-      uint Digit = (uint)ShortDivideRem( ToDivide, 10, Quotient );
+      uint Digit = (uint)Divider.ShortDivideRem( ToDivide, 10, Quotient );
       ToDivide.Copy( Quotient );
       if( ((CommaCount % 3) == 0) && (CommaCount != 0) )
         Result = Digit.ToString() + "," + Result; // Or use a StringBuilder.
@@ -1505,8 +1152,9 @@ namespace RSACrypto
 
 
 
-  // This is an optimization for multiplying when only the top digit
-  // of a number has been set and all of the other digits are zero.
+  // This is an optimization for multiplying when
+  // only the top digit of a number has been set and
+  // all of the other digits are zero.
   internal void MultiplyTop( Integer Result, Integer ToMul )
     {
     // try
@@ -1578,529 +1226,6 @@ namespace RSACrypto
       }
       */
     }
-
-
-
-
-  internal void Divide( Integer ToDivideOriginal,
-                        Integer DivideByOriginal,
-                        Integer Quotient,
-                        Integer Remainder )
-    {
-    if( ToDivideOriginal.IsNegative )
-      throw( new Exception( "Divide() can't be called with negative numbers." ));
-
-    if( DivideByOriginal.IsNegative )
-      throw( new Exception( "Divide() can't be called with negative numbers." ));
-
-    // Returns true if it divides exactly with zero remainder.
-    // This first checks for some basics before trying to divide it:
-    if( DivideByOriginal.IsZero() )
-      throw( new Exception( "Divide() dividing by zero." ));
-
-    ToDivide.Copy( ToDivideOriginal );
-    DivideBy.Copy( DivideByOriginal );
-    if( ToDivide.ParamIsGreater( DivideBy ))
-      {
-      Quotient.SetToZero();
-      Remainder.Copy( ToDivide );
-      return; //  false;
-      }
-
-    if( ToDivide.IsEqual( DivideBy ))
-      {
-      Quotient.SetFromULong( 1 );
-      Remainder.SetToZero();
-      return; //  true;
-      }
-
-    // At this point DivideBy is smaller than ToDivide.
-    if( ToDivide.IsULong() )
-      {
-      ulong ToDivideU = ToDivide.GetAsULong();
-      ulong DivideByU = DivideBy.GetAsULong();
-      ulong QuotientU = ToDivideU / DivideByU;
-      ulong RemainderU = ToDivideU % DivideByU;
-      Quotient.SetFromULong( QuotientU );
-      Remainder.SetFromULong( RemainderU );
-      // if( RemainderU == 0 )
-        return; //  true;
-      // else
-        // return false;
-
-      }
-
-    if( DivideBy.GetIndex() == 0 )
-      {
-      ShortDivide( ToDivide, DivideBy, Quotient, Remainder );
-      return;
-      }
-
-    // return LongDivide1( ToDivide, DivideBy, Quotient, Remainder );
-    // return LongDivide2( ToDivide, DivideBy, Quotient, Remainder );
-    LongDivide3( ToDivide, DivideBy, Quotient, Remainder );
-    }
-
-
-
-  /*
-  private bool LongDivide1( Integer ToDivide,
-                            Integer DivideBy,
-                            Integer Quotient,
-                            Integer Remainder )
-    {
-    Integer Test1 = new Integer();
-    int TestIndex = ToDivide.Index - DivideBy.Index;
-    if( TestIndex != 0 )
-      {
-      // Is 1 too high?
-      Test1.SetDigitAndClear( TestIndex, 1 );
-      Test1.MultiplyTopOne( DivideBy );
-      if( ToDivide.ParamIsGreater( Test1 ))
-        TestIndex--;
-
-      }
-
-    Quotient.SetDigitAndClear( TestIndex, 1 );
-    Quotient.D[TestIndex] = 0;
-    uint BitTest = 0x80000000;
-    while( true )
-      {
-      // For-loop to test each bit:
-      for( int BitCount = 31; BitCount >= 0; BitCount-- )
-        {
-        Test1.Copy( Quotient );
-        Test1.D[TestIndex] |= BitTest;
-        Test1.Multiply( DivideBy );
-        if( Test1.ParamIsGreaterOrEq( ToDivide ))
-          Quotient.D[TestIndex] |= BitTest; // Then keep the bit.
-
-        BitTest >>= 1;
-        }
-
-      if( TestIndex == 0 )
-        break;
-
-      TestIndex--;
-      BitTest = 0x80000000;
-      }
-
-    Test1.Copy( Quotient );
-    Test1.Multiply( DivideBy );
-    if( Test1.IsEqual( ToDivide ) )
-      {
-      Remainder.SetToZero();
-      return true; // Divides exactly.
-      }
-
-    Remainder.Copy( ToDivide );
-    Remainder.Subtract( Test1 );
-    // Does not divide it exactly.
-    return false;
-    }
-    */
-
-
-
-  private void TestDivideBits( ulong MaxValue,
-                               bool IsTop,
-                               int TestIndex,
-                               Integer ToDivide,
-                               Integer DivideBy,
-                               Integer Quotient,
-                               Integer Remainder )
-    {
-    // For a particular value of TestIndex, this does the
-    // for-loop to test each bit.
-    // When you're not testing you wouldn't want to be creating these
-    // and allocating the RAM for them each time it's called.
-    // Integer Test1 = new Integer();
-    // Integer Test2 = new Integer();
-    uint BitTest = 0x80000000;
-    for( int BitCount = 31; BitCount >= 0; BitCount-- )
-      {
-      if( (Quotient.GetD( TestIndex ) | BitTest) > MaxValue )
-        {
-        // If it's more than the MaxValue then the
-        // multiplication test can be skipped for
-        // this bit.
-        // SkippedMultiplies++;
-        BitTest >>= 1;
-        continue;
-        }
-
-      // Is it only doing the multiplication for the top digit?
-      if( IsTop )
-        {
-        TestForBits.Copy( Quotient );
-        TestForBits.SetD( TestIndex, TestForBits.GetD( TestIndex ) | BitTest );
-        MultiplyTop( TestForBits, DivideBy );
-        /*
-        Test2.Copy( Quotient );
-        Test2.SetD( TestIndex, Test2.GetD( TestIndex ) | BitTest );
-        Multiply( Test2, DivideBy );
-        if( !Test1.IsEqual( Test2 ))
-          throw( new Exception( "!Test1.IsEqual( Test2 ) in TestDivideBits()." ));
-        */
-        }
-      else
-        {
-        TestForBits.Copy( Quotient );
-        TestForBits.SetD( TestIndex, TestForBits.GetD( TestIndex ) | BitTest );
-        Multiply( TestForBits, DivideBy );
-        }
-
-      if( TestForBits.ParamIsGreaterOrEq( ToDivide ))
-        Quotient.SetD( TestIndex, Quotient.GetD( TestIndex ) | BitTest ); // Keep the bit.
-
-      BitTest >>= 1;
-      }
-    }
-
-
-
-  /*
-  // This works like LongDivide1 except that it estimates the maximum
-  // value for the digit and the for-loop for bit testing is called
-  // as a separate function.
-  private bool LongDivide2( Integer ToDivide,
-                            Integer DivideBy,
-                            Integer Quotient,
-                            Integer Remainder )
-    {
-    Integer Test1 = new Integer();
-    int TestIndex = ToDivide.Index - DivideBy.Index;
-    // See if TestIndex is too high.
-    if( TestIndex != 0 )
-      {
-      // Is 1 too high?
-      Test1.SetDigitAndClear( TestIndex, 1 );
-      Test1.MultiplyTopOne( DivideBy );
-      if( ToDivide.ParamIsGreater( Test1 ))
-        TestIndex--;
-      }
-
-    // If you were multiplying 99 times 97 you'd get 9,603 and the upper
-    // two digits [96] are used to find the MaxValue.  But if you were multiply
-    // 12 * 13 you'd have 156 and only the upper one digit is used to find
-    // the MaxValue.
-    // Here it checks if it should use one digit or two:
-    ulong MaxValue;
-    if( (ToDivide.Index - 1) > (DivideBy.Index + TestIndex) )
-      {
-      MaxValue = ToDivide.D[ToDivide.Index];
-      }
-    else
-      {
-      MaxValue = ToDivide.D[ToDivide.Index] << 32;
-      MaxValue |= ToDivide.D[ToDivide.Index - 1];
-      }
-
-    MaxValue = MaxValue / DivideBy.D[DivideBy.Index];
-    Quotient.SetDigitAndClear( TestIndex, 1 );
-    Quotient.D[TestIndex] = 0;
-    TestDivideBits( MaxValue,
-                    true,
-                    TestIndex,
-                    ToDivide,
-                    DivideBy,
-                    Quotient,
-                    Remainder );
-
-    if( TestIndex == 0 )
-      {
-      Test1.Copy( Quotient );
-      Test1.Multiply( DivideBy );
-      Remainder.Copy( ToDivide );
-      Remainder.Subtract( Test1 );
-      ///////////////
-      if( DivideBy.ParamIsGreater( Remainder ))
-        throw( new Exception( "Remainder > DivideBy in LongDivide2()." ));
-
-      //////////////
-      if( Remainder.IsZero() )
-        return true;
-      else
-        return false;
-
-      }
-
-    TestIndex--;
-    while( true )
-      {
-      // This remainder is used the same way you do long division
-      // with paper and pen and you keep working with a remainder
-      // until the remainder is reduced to something smaller than
-      // DivideBy.  You look at the remainder to estimate
-      // your next quotient digit.
-      Test1.Copy( Quotient );
-      Test1.Multiply( DivideBy );
-      Remainder.Copy( ToDivide );
-      Remainder.Subtract( Test1 );
-      MaxValue = Remainder.D[Remainder.Index] << 32;
-      MaxValue |= Remainder.D[Remainder.Index - 1];
-      MaxValue = MaxValue / DivideBy.D[DivideBy.Index];
-      TestDivideBits( MaxValue,
-                      false,
-                      TestIndex,
-                      ToDivide,
-                      DivideBy,
-                      Quotient,
-                      Remainder );
-
-      if( TestIndex == 0 )
-        break;
-
-      TestIndex--;
-      }
-
-    Test1.Copy( Quotient );
-    Test1.Multiply( DivideBy );
-    Remainder.Copy( ToDivide );
-    Remainder.Subtract( Test1 );
-    //////////////////////////////
-    if( DivideBy.ParamIsGreater( Remainder ))
-      throw( new Exception( "LgRemainder > LgDivideBy in LongDivide2()." ));
-
-    ////////////////////////////////
-    if( Remainder.IsZero() )
-      return true;
-    else
-      return false;
-
-    }
-  */
-
-
-
-    // If you multiply the numerator and the denominator by the same amount
-    // then the quotient is still the same.  By shifting left (multiplying by twos)
-    // the MaxValue upper limit is more accurate.
-    // This is called normalization.
-  private int FindShiftBy( ulong ToTest )
-    {
-    int ShiftBy = 0;
-    // If it's not already shifted all the way over to the left,
-    // shift it all the way over.
-    for( int Count = 0; Count < 32; Count++ )
-      {
-      if( (ToTest & 0x80000000) != 0 )
-        break;
-
-      ShiftBy++;
-      ToTest <<= 1;
-      }
-
-    return ShiftBy;
-    }
-
-
-
-  private void LongDivide3( Integer ToDivide,
-                            Integer DivideBy,
-                            Integer Quotient,
-                            Integer Remainder )
-    {
-    int TestIndex = ToDivide.GetIndex() - DivideBy.GetIndex();
-    if( TestIndex < 0 )
-      throw( new Exception( "TestIndex < 0 in Divide3." ));
-
-    if( TestIndex != 0 )
-      {
-      // Is 1 too high?
-      TestForDivide1.SetDigitAndClear( TestIndex, 1 );
-      MultiplyTopOne( TestForDivide1, DivideBy );
-      if( ToDivide.ParamIsGreater( TestForDivide1 ))
-        TestIndex--;
-
-      }
-
-    // Keep a copy of the originals.
-    ToDivideKeep.Copy( ToDivide );
-    DivideByKeep.Copy( DivideBy );
-    ulong TestBits = DivideBy.GetD( DivideBy.GetIndex());
-    int ShiftBy = FindShiftBy( TestBits );
-    ToDivide.ShiftLeft( ShiftBy ); // Multiply the numerator and the denominator
-    DivideBy.ShiftLeft( ShiftBy ); // by the same amount.
-    ulong MaxValue;
-    if( (ToDivide.GetIndex() - 1) > (DivideBy.GetIndex() + TestIndex) )
-      {
-      MaxValue = ToDivide.GetD( ToDivide.GetIndex());
-      }
-    else
-      {
-      MaxValue = ToDivide.GetD( ToDivide.GetIndex()) << 32;
-      MaxValue |= ToDivide.GetD( ToDivide.GetIndex() - 1 );
-      }
-
-    ulong Denom = DivideBy.GetD( DivideBy.GetIndex());
-    if( Denom != 0 )
-      MaxValue = MaxValue / Denom;
-    else
-      MaxValue = 0xFFFFFFFF;
-
-    if( MaxValue > 0xFFFFFFFF )
-      MaxValue = 0xFFFFFFFF;
-
-    if( MaxValue == 0 )
-      throw( new Exception( "MaxValue is zero at the top in LongDivide3()." ));
-
-    Quotient.SetDigitAndClear( TestIndex, 1 );
-    Quotient.SetD( TestIndex, 0 );
-    TestForDivide1.Copy( Quotient );
-    TestForDivide1.SetD( TestIndex, MaxValue );
-    MultiplyTop( TestForDivide1, DivideBy );
-    /*
-    Test2.Copy( Quotient );
-    Test2.SetD( TestIndex, MaxValue );
-    Multiply( Test2, DivideBy );
-    if( !Test2.IsEqual( TestForDivide1 ))
-      throw( new Exception( "In Divide3() !IsEqual( Test2, TestForDivide1 )" ));
-    */
-
-    if( TestForDivide1.ParamIsGreaterOrEq( ToDivide ))
-      {
-      // ToMatchExactCount++;
-      // Most of the time (roughly 5 out of every 6 times)
-      // this MaxValue estimate is exactly right:
-      Quotient.SetD( TestIndex, MaxValue );
-      }
-    else
-      {
-      // MaxValue can't be zero here. If it was it would
-      // already be low enough before it got here.
-      MaxValue--;
-      if( MaxValue == 0 )
-        throw( new Exception( "After decrement: MaxValue is zero in LongDivide3()." ));
-
-      TestForDivide1.Copy( Quotient );
-      TestForDivide1.SetD( TestIndex, MaxValue );
-      MultiplyTop( TestForDivide1, DivideBy );
-
-      /*
-      Test2.Copy( Quotient );
-      Test2.SetD( TestIndex, MaxValue );
-      Multiply( Test2, DivideBy );
-      if( !Test2.IsEqual( Test1 ))
-        throw( new Exception( "Top one. !Test2.IsEqual( Test1 ) in LongDivide3()" ));
-      */
-
-      if( TestForDivide1.ParamIsGreaterOrEq( ToDivide ))
-        {
-        // ToMatchDecCount++;
-        Quotient.SetD( TestIndex, MaxValue );
-        }
-      else
-        {
-        // TestDivideBits is done as a last resort, but it's rare.
-        // But it does at least limit it to a worst case scenario
-        // of trying 32 bits, rather than 4 billion or so decrements.
-        TestDivideBits( MaxValue,
-                        true,
-                        TestIndex,
-                        ToDivide,
-                        DivideBy,
-                        Quotient,
-                        Remainder );
-        }
-
-      // TestGap = MaxValue - LgQuotient.D[TestIndex];
-      // if( TestGap > HighestToMatchGap )
-        // HighestToMatchGap = TestGap;
-
-      // HighestToMatchGap: 4,294,967,293
-      // uint size:         4,294,967,295 uint
-      }
-
-    // If it's done.
-    if( TestIndex == 0 )
-      {
-      TestForDivide1.Copy( Quotient );
-      Multiply( TestForDivide1, DivideByKeep );
-      Remainder.Copy( ToDivideKeep );
-      Subtract( Remainder, TestForDivide1 );
-      //if( DivideByKeep.ParamIsGreater( Remainder ))
-        // throw( new Exception( "Remainder > DivideBy in LongDivide3()." ));
-
-      return;
-      }
-
-    // Now do the rest of the digits.
-    TestIndex--;
-    while( true )
-      {
-      TestForDivide1.Copy( Quotient );
-      // First Multiply() for each digit.
-      Multiply( TestForDivide1, DivideBy );
-      // if( ToDivide.ParamIsGreater( TestForDivide1 ))
-      //   throw( new Exception( "Problem here in LongDivide3()." ));
-      Remainder.Copy( ToDivide );
-      Subtract( Remainder, TestForDivide1 );
-      MaxValue = Remainder.GetD( Remainder.GetIndex()) << 32;
-      int CheckIndex = Remainder.GetIndex() - 1;
-      if( CheckIndex > 0 )
-        MaxValue |= Remainder.GetD( CheckIndex );
-
-      Denom = DivideBy.GetD( DivideBy.GetIndex());
-      if( Denom != 0 )
-        MaxValue = MaxValue / Denom;
-      else
-        MaxValue = 0xFFFFFFFF;
-
-      if( MaxValue > 0xFFFFFFFF )
-        MaxValue = 0xFFFFFFFF;
-
-      TestForDivide1.Copy( Quotient );
-      TestForDivide1.SetD( TestIndex, MaxValue );
-      // There's a minimum of two full Multiply() operations per digit.
-      Multiply( TestForDivide1, DivideBy );
-      if( TestForDivide1.ParamIsGreaterOrEq( ToDivide ))
-        {
-        // Most of the time this MaxValue estimate is exactly right:
-        // ToMatchExactCount++;
-        Quotient.SetD( TestIndex, MaxValue );
-        }
-      else
-        {
-        MaxValue--;
-        TestForDivide1.Copy( Quotient );
-        TestForDivide1.SetD( TestIndex, MaxValue );
-        Multiply( TestForDivide1, DivideBy );
-        if( TestForDivide1.ParamIsGreaterOrEq( ToDivide ))
-          {
-          // ToMatchDecCount++;
-          Quotient.SetD( TestIndex, MaxValue );
-          }
-        else
-          {
-          TestDivideBits( MaxValue,
-                          false,
-                          TestIndex,
-                          ToDivide,
-                          DivideBy,
-                          Quotient,
-                          Remainder );
-
-          // TestGap = MaxValue - LgQuotient.D[TestIndex];
-          // if( TestGap > HighestToMatchGap )
-            // HighestToMatchGap = TestGap;
-          }
-        }
-
-      if( TestIndex == 0 )
-        break;
-
-      TestIndex--;
-      }
-
-    TestForDivide1.Copy( Quotient );
-    Multiply( TestForDivide1, DivideByKeep );
-    Remainder.Copy( ToDivideKeep );
-    Subtract( Remainder, TestForDivide1 );
-    // if( DivideByKeep.ParamIsGreater( Remainder ))
-      // throw( new Exception( "Remainder > DivideBy in LongDivide3()." ));
-    }
-
 
 
 
@@ -2208,7 +1333,7 @@ namespace RSACrypto
     SqrtXPartTwoB.ShiftLeft( 1 ); // Times 2 for 2B.
     SqrtXPartTest1.Copy( SqrtXPartTwoB );
     ulong TestBits = SqrtXPartTest1.GetD( SqrtXPartTest1.GetIndex());
-    int ShiftBy = FindShiftBy( TestBits );
+    int ShiftBy = Divider.FindShiftBy( TestBits );
     SqrtXPartR2.Copy( SqrtXPartDiff );
     SqrtXPartR2.ShiftLeft( ShiftBy );     // Multiply the numerator and the denominator
     SqrtXPartTest1.ShiftLeft( ShiftBy ); // by the same amount.
@@ -2370,7 +1495,7 @@ namespace RSACrypto
 
     while( true )
       {
-      Divide( GcdX, GcdY, Quotient, Remainder );
+      Divider.Divide( GcdX, GcdY, Quotient, Remainder );
       if( Remainder.IsZero())
         {
         Gcd.Copy( GcdY ); // It's the smaller one.
@@ -2425,7 +1550,7 @@ namespace RSACrypto
       if( V2.IsNegative )
         throw( new Exception( "V2 was negative." ));
 
-      Divide( U2, V2, Quotient, Remainder );
+      Divider.Divide( U2, V2, Quotient, Remainder );
       if( Remainder.IsZero())
         {
         Worker.ReportProgress( 0, "Remainder is zero. No multiplicative-inverse." );
@@ -2471,7 +1596,7 @@ namespace RSACrypto
     TestForModInverse1.Copy( MultInverse );
     TestForModInverse2.Copy( X );
     Multiply( TestForModInverse1, TestForModInverse2 );
-    Divide( TestForModInverse1, Modulus, Quotient, Remainder );
+    Divider.Divide( TestForModInverse1, Modulus, Quotient, Remainder );
     if( !Remainder.IsOne())  // By the definition of Multiplicative inverse:
       throw( new Exception( "MultInverse is wrong: " + ToString10( Remainder )));
 
@@ -2634,7 +1759,7 @@ namespace RSACrypto
     if( Modulus.ParamIsGreater( Result ))
       {
       // throw( new Exception( "This is not supposed to be input for RSA plain text." ));
-      Divide( Result, Modulus, Quotient, Remainder );
+      Divider.Divide( Result, Modulus, Quotient, Remainder );
       Result.Copy( Remainder );
       }
 
@@ -2696,7 +1821,10 @@ namespace RSACrypto
 
     ModularReduction( TempForModPower, Result );
     Result.Copy( TempForModPower );
-    Divide( Result, Modulus, Quotient, Remainder );
+
+    // Notice that this Divide() is done once.  Not
+    // a thousand or two thousand times.
+    Divider.Divide( Result, Modulus, Quotient, Remainder );
     Result.Copy( Remainder );
     if( Quotient.GetIndex() > 1 )
       throw( new Exception( "This never happens. The quotient index is never more than 1." ));
@@ -2838,7 +1966,7 @@ namespace RSACrypto
       if( GeneralBaseArray[Count] == null )
         GeneralBaseArray[Count] = new Integer();
 
-      Divide( BaseValue, GeneralBase, Quotient, Remainder );
+      Divider.Divide( BaseValue, GeneralBase, Quotient, Remainder );
       GeneralBaseArray[Count].Copy( Remainder );
 
       BaseValue.Copy( Remainder );
@@ -2923,7 +2051,7 @@ namespace RSACrypto
       throw( new Exception( "KnownNumberULong > 1000000. FindMultiplicativeInverseSmall() was called with too big of an exponent." ));
 
     // (Y * PhiN) + 1 mod PubKExponent has to be zero if Y is a solution.
-    ulong ModulusModKnown = GetMod32( Modulus, KnownNumberULong );
+    ulong ModulusModKnown = Divider.GetMod32( Modulus, KnownNumberULong );
     Worker.ReportProgress( 0, "ModulusModExponent: " + ModulusModKnown.ToString( "N0" ));
     if( Worker.CancellationPending )
       return false;
@@ -2951,7 +2079,7 @@ namespace RSACrypto
         ToFind.Copy( Modulus );
         MultiplyULong( ToFind, Y );
         ToFind.AddULong( 1 );
-        Divide( ToFind, KnownNumber, Quotient, Remainder );
+        Divider.Divide( ToFind, KnownNumber, Quotient, Remainder );
         if( !Remainder.IsZero())
           throw( new Exception( "This can't happen. !Remainder.IsZero()" ));
 
@@ -2966,7 +2094,7 @@ namespace RSACrypto
 
     TestForModInverse1.Copy( ToFind );
     MultiplyULong( TestForModInverse1, KnownNumberULong );
-    Divide( TestForModInverse1, Modulus, Quotient, Remainder );
+    Divider.Divide( TestForModInverse1, Modulus, Quotient, Remainder );
     if( !Remainder.IsOne())
       {
       // The definition is that it's congruent to 1 mod the modulus,
@@ -2990,7 +2118,6 @@ namespace RSACrypto
 
   }
 }
-
 
 
 
