@@ -24,6 +24,7 @@ namespace RSACrypto
   {
   private MainForm MForm;
   internal Division Divider;
+  internal ModularReduction ModReduction;
   private long[] SignedD; // Signed digits for use in subtraction.
   private ulong[,] M; // Scratch pad, just like you would do on paper.
   private ulong[] Scratch; // Scratch pad, just like you would do on paper.
@@ -67,16 +68,6 @@ namespace RSACrypto
   private uint[] PrimeArray;
   internal const int PrimeArrayLength = 1024 * 16;
   private bool Cancelled = false;
-  private Integer[] GeneralBaseArray;
-  private Integer CurrentModReductionBase = new Integer();
-  private Integer TempForModPower = new Integer();
-  private Integer TestForModPower = new Integer();
-  private Integer TestForModReduction2 = new Integer();
-  private Integer TestForModReduction2ForModPower = new Integer();
-  private Integer XForModPower = new Integer();
-  private Integer ExponentCopy = new Integer();
-  private Integer AccumulateBase = new Integer();
-  private int MaxModPowerIndex = 0;
 
 
 
@@ -89,6 +80,8 @@ namespace RSACrypto
     {
     MForm = UseForm;
     Divider = new Division( MForm, this );
+    ModReduction = new ModularReduction( MForm, this );
+
     SignedD = new long[Integer.DigitArraySize];
     M = new ulong[Integer.DigitArraySize, Integer.DigitArraySize];
     Scratch = new ulong[Integer.DigitArraySize];
@@ -1390,82 +1383,6 @@ namespace RSACrypto
 
 
 
-  /*
-  internal void ModularPowerOld( Integer Result, Integer Exponent, Integer ModN )
-    {
-    if( Result.IsZero())
-      return; // With Result still zero.
-
-    if( Result.IsEqual( ModN ))
-      {
-      // It is congruent to zero % ModN.
-      Result.SetToZero();
-      return;
-      }
-
-    // Result is not zero at this point.
-    if( Exponent.IsZero() )
-      {
-      Result.SetFromULong( 1 );
-      return;
-      }
-
-    if( ModN.ParamIsGreater( Result ))
-      {
-      Divide( Result, ModN, Quotient, Remainder );
-      Result.Copy( Remainder );
-      }
-
-    if( Exponent.IsEqualToULong( 1 ))
-      {
-      // Result stays the same.
-      return;
-      }
-
-    XForModPower.Copy( Result );
-    ExponentCopy.Copy( Exponent );
-    Result.SetFromULong( 1 );
-    while( !ExponentCopy.IsZero())
-      {
-      // If the bit is 1, then do a lot more work here.
-      if( (ExponentCopy.GetD( 0 ) & 1) == 1 )
-        {
-        // This is a multiplication for every _bit_.  So a 1024-bit
-        // modulus means this gets called roughly 512 times.
-        // The commonly used public exponent is 65537, which has
-        // only two bits set to 1, the rest are all zeros.  But the
-        // private key exponents are long randomish numbers.
-        // (See: Hamming Weight.)
-        Multiply( Result, XForModPower );
-        SubtractULong( ExponentCopy, 1 );
-        // Usually it's true that the Result is greater than ModN.
-        if( ModN.ParamIsGreater( Result ))
-          {
-          // Here is where that really long division algorithm gets used a
-          // lot in a loop.  And this Divide() gets called roughly about
-          // 512 times.
-          Divide( Result, ModN, Quotient, Remainder );
-          Result.Copy( Remainder );
-          }
-        }
-
-      // Square it.
-      // This is a multiplication for every _bit_.  So a 1024-bit
-      // modulus means this gets called 1024 times.
-      Multiply( XForModPower, XForModPower );
-      ExponentCopy.ShiftRight( 1 ); // Divide by 2.
-      if( ModN.ParamIsGreater( XForModPower ))
-        {
-        // And this Divide() gets called about 1024 times.
-        Divide( XForModPower, ModN, Quotient, Remainder );
-        XForModPower.Copy( Remainder );
-        }
-      }
-    }
-    */
-
-
-
   internal void GreatestCommonDivisor( Integer X, Integer Y, Integer Gcd )
     {
     // This is the basic Euclidean Algorithm.
@@ -1666,7 +1583,7 @@ namespace RSACrypto
     TestFermat.SetFromULong( Base );
 
     // ModularPower( Result, Exponent, Modulus, UsePresetBaseArray )
-    ModularPower( TestFermat, Fermat1, ToTest, false );
+    ModReduction.ModularPower( TestFermat, Fermat1, ToTest, false );
     // if( !TestFermat.IsEqual( Fermat2 ))
       // throw( new Exception( "!TestFermat.IsEqual( Fermat2 )." ));
 
@@ -1726,300 +1643,6 @@ namespace RSACrypto
       {
       throw( new Exception( "Exception in ShowBinomialCoefficients()." + Except.Message ));
       }
-    }
-
-
-
-  // This is the standard modular power algorithm that
-  // you could find in any reference, but its use of
-  // the new modular reduction algorithm is new (in 2015).
-  // The square and multiply method is in Wikipedia:
-  // https://en.wikipedia.org/wiki/Exponentiation_by_squaring
-  // x^n = (x^2)^((n - 1)/2) if n is odd.
-  // x^n = (x^2)^(n/2)       if n is even.
-  internal void ModularPower( Integer Result, Integer Exponent, Integer Modulus, bool UsePresetBaseArray )
-    {
-    if( Result.IsZero())
-      return; // With Result still zero.
-
-    if( Result.IsEqual( Modulus ))
-      {
-      // It is congruent to zero % ModN.
-      Result.SetToZero();
-      return;
-      }
-
-    // Result is not zero at this point.
-    if( Exponent.IsZero() )
-      {
-      Result.SetFromULong( 1 );
-      return;
-      }
-
-    if( Modulus.ParamIsGreater( Result ))
-      {
-      // throw( new Exception( "This is not supposed to be input for RSA plain text." ));
-      Divider.Divide( Result, Modulus, Quotient, Remainder );
-      Result.Copy( Remainder );
-      }
-
-    if( Exponent.IsOne())
-      {
-      // Result stays the same.
-      return;
-      }
-
-    if( !UsePresetBaseArray )
-      SetupGeneralBaseArray( Modulus );
-
-    XForModPower.Copy( Result );
-    ExponentCopy.Copy( Exponent );
-    // int TestIndex = 0;
-    Result.SetFromULong( 1 );
-    while( true )
-      {
-      if( (ExponentCopy.GetD( 0 ) & 1) == 1 ) // If the bottom bit is 1.
-        {
-        Multiply( Result, XForModPower );
-
-        // if( Result.ParamIsGreater( CurrentModReductionBase ))
-        // TestForModReduction2.Copy( Result );
-
-        ModularReduction( TempForModPower, Result );
-        // ModularReduction2( TestForModReduction2ForModPower, TestForModReduction2 );
-        // if( !TestForModReduction2ForModPower.IsEqual( TempForModPower ))
-          // {
-          // throw( new Exception( "Mod Reduction 2 is not right." ));
-          // }
-
-        Result.Copy( TempForModPower );
-        }
-
-      ExponentCopy.ShiftRight( 1 ); // Divide by 2.
-      if( ExponentCopy.IsZero())
-        break;
-
-      // Square it.
-      Multiply( XForModPower, XForModPower );
-
-      // Time this.
-      // if( XForModPower.ParamIsGreater( CurrentModReductionBase ))
-      ModularReduction( TempForModPower, XForModPower );
-      XForModPower.Copy( TempForModPower );
-      }
-
-    // When ModularReduction() gets called it multiplies a base number
-    // by a uint sized digit.  So that can make the result one digit bigger
-    // than GeneralBase.  Then when they are added up you can get carry
-    // bits that can make it a little bigger.
-    int HowBig = Result.GetIndex() - Modulus.GetIndex();
-    // if( HowBig > 1 )
-      // throw( new Exception( "This does happen. Diff: " + HowBig.ToString() ));
-
-    if( HowBig > 2 )
-      throw( new Exception( "The never happens. Diff: " + HowBig.ToString() ));
-
-    ModularReduction( TempForModPower, Result );
-    Result.Copy( TempForModPower );
-
-    // Notice that this Divide() is done once.  Not
-    // a thousand or two thousand times.
-    Divider.Divide( Result, Modulus, Quotient, Remainder );
-    Result.Copy( Remainder );
-    if( Quotient.GetIndex() > 1 )
-      throw( new Exception( "This never happens. The quotient index is never more than 1." ));
-
-    }
-
-
-/*
-  // Copyright Eric Chauvin 2015 - 2018.
-  private int ModularReduction( Integer Result, Integer ToReduce )
-    {
-    try
-    {
-    if( GeneralBaseArray == null )
-      throw( new Exception( "SetupGeneralBaseArray() should have already been called." ));
-
-    Result.SetToZero();
-    int HowManyToAdd = ToReduce.GetIndex() + 1;
-    if( HowManyToAdd > GeneralBaseArray.Length )
-      throw( new Exception( "The Input number should have been reduced first. HowManyToAdd > GeneralBaseArray.Length" ));
-
-    int BiggestIndex = 0;
-    for( int Count = 0; Count < HowManyToAdd; Count++ )
-      {
-      // The size of the numbers in GeneralBaseArray are
-      // all less than the size of GeneralBase.
-      // This multiplication by a uint is with a number
-      // that is not bigger than GeneralBase.  Compare
-      // this with the two full Muliply() calls done on
-      // each digit of the quotient in LongDivide3().
-      // AccumulateBase is set to a new value here.
-      int CheckIndex = MultiplyUIntFromCopy( AccumulateBase, GeneralBaseArray[Count], ToReduce.GetD( Count ));
-      if( CheckIndex > BiggestIndex )
-        BiggestIndex = CheckIndex;
-
-      Result.Add( AccumulateBase );
-      }
-
-    return Result.GetIndex();
-    }
-    catch( Exception Except )
-      {
-      throw( new Exception( "Exception in ModularReduction(): " + Except.Message ));
-      }
-    }
-*/
-
-
-
-  // Copyright Eric Chauvin 2015 - 2018.
-  private int ModularReduction( Integer Result, Integer ToReduce )
-    {
-    try
-    {
-    if( ToReduce.ParamIsGreater( CurrentModReductionBase ))
-      {
-      Result.Copy( ToReduce );
-      return Result.GetIndex();
-      }
-
-    if( GeneralBaseArray == null )
-      throw( new Exception( "SetupGeneralBaseArray() should have already been called." ));
-
-    Result.SetToZero();
-    int TopOfToReduce = ToReduce.GetIndex() + 1;
-    if( TopOfToReduce > GeneralBaseArray.Length )
-      throw( new Exception( "The Input number should have been reduced first. HowManyToAdd > GeneralBaseArray.Length" ));
-
-    // If it gets this far then ToReduce is at
-    // least this big.
-    int HighestCopyIndex = CurrentModReductionBase.GetIndex();
-    for( int Count = 0; Count < HighestCopyIndex; Count++ )
-      Result.SetD( Count, ToReduce.GetD( Count ));
-
-    Result.SetIndex( HighestCopyIndex - 1 );
-
-    int BiggestIndex = 0;
-    for( int Count = HighestCopyIndex; Count < TopOfToReduce; Count++ )
-      {
-      // The size of the numbers in GeneralBaseArray
-      // are all less than the size of GeneralBase.
-      // This multiplication by a uint is with a
-      // number that is not bigger than GeneralBase.
-      // Compare this with the two full Muliply()
-      // calls done on each digit of the quotient
-      // in LongDivide3().
-
-      // AccumulateBase is set to a new value here.
-      int CheckIndex = MultiplyUIntFromCopy( AccumulateBase, GeneralBaseArray[Count], ToReduce.GetD( Count ));
-      if( CheckIndex > BiggestIndex )
-        BiggestIndex = CheckIndex;
-
-      Result.Add( AccumulateBase );
-      }
-
-    return Result.GetIndex();
-    }
-    catch( Exception Except )
-      {
-      throw( new Exception( "Exception in ModularReduction(): " + Except.Message ));
-      }
-    }
-
-
-
-  internal void SetupGeneralBaseArray( Integer GeneralBase )
-    {
-    // The word 'Base' comes from the base of a number
-    // system.  Like normal decimal numbers have base
-    // 10, binary numbers have base 2, etc.
-
-    CurrentModReductionBase.Copy( GeneralBase );
-
-    // The input to the accumulator can be twice the bit length of GeneralBase.
-    int HowMany = ((GeneralBase.GetIndex() + 1) * 2) + 10; // Plus some extra for carries...
-
-    if( GeneralBaseArray == null )
-      {
-      GeneralBaseArray = new Integer[HowMany];
-      }
-
-    if( GeneralBaseArray.Length < HowMany )
-      {
-      GeneralBaseArray = new Integer[HowMany];
-      }
-
-    Integer Base = new Integer();
-    Base.SetFromULong( 256 ); // 0x100
-    MultiplyUInt( Base, 256 ); // 0x10000
-    MultiplyUInt( Base, 256 ); // 0x1000000
-    MultiplyUInt( Base, 256 ); // 0x100000000 is the base of this number system.
-    // 0x1 0000 0000
-
-    Integer BaseValue = new Integer();
-    BaseValue.SetFromULong( 1 );
-
-    for( int Count = 0; Count < HowMany; Count++ )
-      {
-      if( GeneralBaseArray[Count] == null )
-        GeneralBaseArray[Count] = new Integer();
-
-      Divider.Divide( BaseValue, GeneralBase, Quotient, Remainder );
-      GeneralBaseArray[Count].Copy( Remainder );
-
-      BaseValue.Copy( Remainder );
-      Multiply( BaseValue, Base );
-      }
-    }
-
-
-
-  internal uint ModularPowerSmall( ulong Input, Integer Exponent, uint Modulus )
-    {
-    if( Input == 0 )
-      return 0;
-
-    if( Input == Modulus )
-      {
-      // It is congruent to zero % Modulus.
-      return 0;
-      }
-
-    // Result is not zero at this point.
-    if( Exponent.IsZero() )
-      return 1;
-
-    ulong Result = Input;
-    if( Input > Modulus )
-      Result = Input % Modulus;
-
-    if( Exponent.IsOne())
-      return (uint)Result;
-
-    ulong XForModPowerU = Result;
-    ExponentCopy.Copy( Exponent );
-    // int TestIndex = 0;
-    Result = 1;
-    while( true )
-      {
-      if( (ExponentCopy.GetD( 0 ) & 1) == 1 ) // If the bottom bit is 1.
-        {
-        Result = Result * XForModPowerU;
-        Result = Result % Modulus;
-        }
-
-      ExponentCopy.ShiftRight( 1 ); // Divide by 2.
-      if( ExponentCopy.IsZero())
-        break;
-
-      // Square it.
-      XForModPowerU = XForModPowerU * XForModPowerU;
-      XForModPowerU = XForModPowerU % Modulus;
-      }
-
-    return (uint)Result;
     }
 
 
@@ -2109,20 +1732,6 @@ namespace RSACrypto
 
 
 
-  internal int GetMaxModPowerIndex()
-    {
-    return MaxModPowerIndex;
-    }
-
-
-
   }
 }
-
-
-
-
-
-
-
 
