@@ -267,8 +267,8 @@ namespace RSACrypto
 
       // For Modular Reduction.  This only has to be done
       // once, when P and Q are made.
-      IntMathForP.SetupGeneralBaseArray( PrimeP );
-      IntMathForQ.SetupGeneralBaseArray( PrimeQ );
+      IntMathForP.ModReduction.SetupGeneralBaseArray( PrimeP );
+      IntMathForQ.ModReduction.SetupGeneralBaseArray( PrimeQ );
       PrimePMinus1.Copy( PrimeP );
       IntMath.SubtractULong( PrimePMinus1, 1 );
       PrimeQMinus1.Copy( PrimeQ );
@@ -407,7 +407,7 @@ namespace RSACrypto
       Worker.ReportProgress( 0, " " );
       Worker.ReportProgress( 0, "Before encrypting number: " + IntMath.ToString10( ToEncrypt ));
       Worker.ReportProgress( 0, " " );
-      IntMath.ModularPower( ToEncrypt, PubKeyExponent, PubKeyN, false );
+      IntMath.ModReduction.ModularPower( ToEncrypt, PubKeyExponent, PubKeyN, false );
       if( Worker.CancellationPending )
         return;
 
@@ -420,7 +420,7 @@ namespace RSACrypto
       Worker.ReportProgress( 0, " " );
       ECTime DecryptTime = new ECTime();
       DecryptTime.SetToNow();
-      IntMath.ModularPower( ToEncrypt, PrivKInverseExponent, PubKeyN, false );
+      IntMath.ModReduction.ModularPower( ToEncrypt, PrivKInverseExponent, PubKeyN, false );
       Worker.ReportProgress( 0, "Decrypted number: " + IntMath.ToString10( ToEncrypt ));
       if( !PlainTextNumber.IsEqual( ToEncrypt ))
         {
@@ -444,7 +444,7 @@ namespace RSACrypto
         }
 
       PlainTextNumber.Copy( ToEncrypt );
-      IntMath.ModularPower( ToEncrypt, PubKeyExponent, PubKeyN, false );
+      IntMath.ModReduction.ModularPower( ToEncrypt, PubKeyExponent, PubKeyN, false );
       if( Worker.CancellationPending )
         return;
 
@@ -513,14 +513,14 @@ namespace RSACrypto
     Worker.ReportProgress( 0, "EncryptedNumber: " + IntMath.ToString10( EncryptedNumber ));
     //      2.2 Let m_1 = c^dP mod p.
     TestForDecrypt.Copy( EncryptedNumber );
-    IntMathForP.ModularPower( TestForDecrypt, PrivKInverseExponentDP, PrimeP, true );
+    IntMathForP.ModReduction.ModularPower( TestForDecrypt, PrivKInverseExponentDP, PrimeP, true );
     if( Worker.CancellationPending )
       return false;
 
     M1ForInverse.Copy( TestForDecrypt );
     //      2.3 Let m_2 = c^dQ mod q.
     TestForDecrypt.Copy( EncryptedNumber );
-    IntMathForQ.ModularPower( TestForDecrypt, PrivKInverseExponentDQ, PrimeQ, true );
+    IntMathForQ.ModReduction.ModularPower( TestForDecrypt, PrivKInverseExponentDQ, PrimeQ, true );
     if( Worker.CancellationPending )
       return false;
 
