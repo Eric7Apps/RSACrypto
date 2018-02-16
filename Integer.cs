@@ -181,6 +181,16 @@ namespace RSACrypto
 
 
 
+  internal void CopyUpTo( Integer CopyFrom, int Where )
+    {
+    IsNegative = CopyFrom.IsNegative;
+    Index = Where;
+    for( int Count = 0; Count <= Index; Count++ )
+      D[Count] = CopyFrom.D[Count];
+
+    }
+
+
 
   internal bool IsEqualToULong( ulong ToTest )
     {
@@ -1050,6 +1060,11 @@ namespace RSACrypto
 
   }
 }
+
+
+
+
+
 
 
 
