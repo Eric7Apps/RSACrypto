@@ -22,7 +22,6 @@ using System.Threading.Tasks;
 using System.Threading; // For Sleep().
 using System.ComponentModel; // BackgroundWorker
 using System.Security.Cryptography;
-using ECCommon;
 
 
 
@@ -63,8 +62,8 @@ namespace RSACrypto
   // private const int PrimeIndex = 2; // Approximmately 96-bit primes.
   // private const int PrimeIndex = 3; // Approximmately 128-bit primes.
   // private const int PrimeIndex = 7; // Approximmately 256-bit primes.
-  // private const int PrimeIndex = 15; // Approximmately 512-bit primes.
-  private const int PrimeIndex = 31; // Approximmately 1024-bit primes.
+  private const int PrimeIndex = 15; // Approximmately 512-bit primes.
+  // private const int PrimeIndex = 31; // Approximmately 1024-bit primes.
   // private const int PrimeIndex = 63; // Approximmately 2048-bit primes.
   // private const int PrimeIndex = 127; // Approximmately 4096-bit primes.
 
@@ -82,10 +81,10 @@ namespace RSACrypto
     StartTime = new ECTime();
     StartTime.SetToNow();
     RngCsp = new RNGCryptoServiceProvider();
-    IntMath = new IntegerMath();
+    IntMath = new IntegerMath( null );
 
-    IntMathForP = new IntegerMath();
-    IntMathForQ = new IntegerMath();
+    IntMathForP = new IntegerMath( null );
+    IntMathForQ = new IntegerMath( null );
     // Worker.ReportProgress( 0, IntMath.GetStatusString() );
 
     Quotient = new Integer();
@@ -359,7 +358,7 @@ namespace RSACrypto
       // PrivKInverseExponentDP is PrivKInverseExponent mod PrimePMinus1.
       Integer Test1 = new Integer();
       Test1.Copy( PrivKInverseExponent );
-      IntMath.Divide( Test1, PrimePMinus1, Quotient, Remainder );
+      IntMath.Divider.Divide( Test1, PrimePMinus1, Quotient, Remainder );
       Test1.Copy( Remainder );
       if( !Test1.IsEqual( PrivKInverseExponentDP ))
         throw( new Exception( "Bug. This does not match the definition of PrivKInverseExponentDP." ));
@@ -382,7 +381,7 @@ namespace RSACrypto
         return;
 
       Test1.Copy( PrivKInverseExponent );
-      IntMath.Divide( Test1, PrimeQMinus1, Quotient, Remainder );
+      IntMath.Divider.Divide( Test1, PrimeQMinus1, Quotient, Remainder );
       Test1.Copy( Remainder );
       if( !Test1.IsEqual( PrivKInverseExponentDQ ))
         throw( new Exception( "Bug. This does not match the definition of PrivKInverseExponentDQ." ));
@@ -412,7 +411,8 @@ namespace RSACrypto
       if( Worker.CancellationPending )
         return;
 
-      Worker.ReportProgress( 0, IntMath.GetStatusString() );
+      // Worker.ReportProgress( 0, IntMath.GetStatusString() );
+
       Integer CipherTextNumber = new Integer();
       CipherTextNumber.Copy( ToEncrypt );
       Worker.ReportProgress( 0, " " );
@@ -541,7 +541,7 @@ namespace RSACrypto
       M1M2SizeDiff.Copy( M2ForInverse );
       IntMath.Subtract( M1M2SizeDiff, M1ForInverse );
       // Unfortunately this long Divide() has to be done.
-      IntMath.Divide( M1M2SizeDiff, PrimeP, Quotient, Remainder );
+      IntMath.Divider.Divide( M1M2SizeDiff, PrimeP, Quotient, Remainder );
       Quotient.AddULong( 1 );
       Worker.ReportProgress( 0, "The Quotient for M1M2SizeDiff is: " + IntMath.ToString10( Quotient ));
       IntMath.Multiply( Quotient, PrimeP );
@@ -563,7 +563,7 @@ namespace RSACrypto
 
     if( PrimeP.ParamIsGreater( HForQInv ))
       {
-      IntMath.Divide( HForQInv, PrimeP, Quotient, Remainder );
+      IntMath.Divider.Divide( HForQInv, PrimeP, Quotient, Remainder );
       HForQInv.Copy( Remainder );
       }
 
@@ -588,6 +588,7 @@ namespace RSACrypto
 
   }
 }
+
 
 
 
