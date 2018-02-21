@@ -733,13 +733,14 @@ namespace RSACrypto
 
 
 
-  // This is used in some algorithms to set one particular
-  // digit and have all other digits set to zero.
+  // This is used in some algorithms to set one
+  // particular digit and have all other digits set
+  // to zero.
   internal void SetDigitAndClear( int Where, ulong ToSet )
     {
     // For testing:
-    // This would lead to an undefined number that's zero
-    // but not zero since the Index isn't zero.
+    // This would lead to an undefined number that's
+    // zero but not zero since the Index isn't zero.
     if( (ToSet == 0) && (Where != 0) )
       throw( new Exception( "Calling SetDigitAndClear() with a bad zero." ));
 
@@ -1060,12 +1061,6 @@ namespace RSACrypto
 
   }
 }
-
-
-
-
-
-
 
 
 
