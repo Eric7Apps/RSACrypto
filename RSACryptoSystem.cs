@@ -153,7 +153,7 @@ namespace RSACrypto
 
       // Make sure that it's the size I think it is.
       if( Result.GetIndex() < SetToIndex )
-        throw( new Exception( "Bug. The size of the random prime is not right." ));
+        throw( new Exception( "The size of the random prime is not right." ));
 
       uint TestPrime = IntMath.IsDivisibleBySmallPrime( Result );
       if( 0 != TestPrime)
@@ -295,8 +295,26 @@ namespace RSACrypto
       Worker.ReportProgress( 0, IntMath.ToString10( PubKeyN ));
       Worker.ReportProgress( 0, " " );
 
+      // Test Division:
+      Integer QuotientTest = new Integer();
+      Integer RemainderTest = new Integer();
+
+      IntMath.Divider.Divide( PubKeyN, PrimeP, QuotientTest, RemainderTest );
+      if( !RemainderTest.IsZero())
+        throw( new Exception( "RemainderTest should be zero after divide by PrimeP." ));
+
+      IntMath.Multiply( QuotientTest, PrimeP );
+      if( !QuotientTest.IsEqual( PubKeyN ))
+        throw( new Exception( "QuotientTest didn't come out right." ));
+
       // Euler's Theorem:
       // https://en.wikipedia.org/wiki/Euler's_theorem
+
+// ==========
+// Work on the Least Common Multiple thing for
+// P - 1 and Q - 1.
+// =====
+
       IntMath.GreatestCommonDivisor( PrimePMinus1, PrimeQMinus1, Gcd );
       Worker.ReportProgress( 0, "GCD of PrimePMinus1, PrimeQMinus1 is: " + IntMath.ToString10( Gcd ));
       if( !Gcd.IsULong())
@@ -308,6 +326,8 @@ namespace RSACrypto
         {
         ulong TooBig = Gcd.GetAsULong();
         // How big of a GCD is too big?
+// ==============
+
         if( TooBig > 1234567 )
           {
           // (P - 1)(Q - 1) + (P - 1) + (Q - 1) = PQ - 1
@@ -361,7 +381,7 @@ namespace RSACrypto
       IntMath.Divider.Divide( Test1, PrimePMinus1, Quotient, Remainder );
       Test1.Copy( Remainder );
       if( !Test1.IsEqual( PrivKInverseExponentDP ))
-        throw( new Exception( "Bug. This does not match the definition of PrivKInverseExponentDP." ));
+        throw( new Exception( "This does not match the definition of PrivKInverseExponentDP." ));
 
       if( Worker.CancellationPending )
         return;
@@ -384,7 +404,7 @@ namespace RSACrypto
       IntMath.Divider.Divide( Test1, PrimeQMinus1, Quotient, Remainder );
       Test1.Copy( Remainder );
       if( !Test1.IsEqual( PrivKInverseExponentDQ ))
-        throw( new Exception( "Bug. This does not match the definition of PrivKInverseExponentDQ." ));
+        throw( new Exception( "This does not match the definition of PrivKInverseExponentDQ." ));
 
       // Make a random number to test encryption/decryption.
       Integer ToEncrypt = new Integer();
@@ -454,7 +474,7 @@ namespace RSACrypto
         throw( new Exception( "MultiplicativeInverse() returned false." ));
 
       if( QInv.IsNegative )
-        throw( new Exception( "This is a bug. QInv is negative." ));
+        throw( new Exception( "QInv is negative." ));
 
       Worker.ReportProgress( 0, "QInv is: " + IntMath.ToString10( QInv ));
       DecryptWithQInverse( CipherTextNumber,
@@ -551,15 +571,15 @@ namespace RSACrypto
     M1MinusM2.Copy( M1ForInverse );
     IntMath.Subtract( M1MinusM2, M2ForInverse );
     if( M1MinusM2.IsNegative )
-      throw( new Exception( "This is a bug. M1MinusM2.IsNegative is true." ));
+      throw( new Exception( "M1MinusM2.IsNegative is true." ));
 
     if( QInv.IsNegative )
-      throw( new Exception( "This is a bug. QInv.IsNegative is true." ));
+      throw( new Exception( "QInv.IsNegative is true." ));
 
     HForQInv.Copy( M1MinusM2 );
     IntMath.Multiply( HForQInv, QInv );
     if( HForQInv.IsNegative )
-      throw( new Exception( "This is a bug. HForQInv.IsNegative is true." ));
+      throw( new Exception( "HForQInv.IsNegative is true." ));
 
     if( PrimeP.ParamIsGreater( HForQInv ))
       {
@@ -588,6 +608,8 @@ namespace RSACrypto
 
   }
 }
+
+
 
 
 
