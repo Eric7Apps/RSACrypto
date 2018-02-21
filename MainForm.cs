@@ -49,7 +49,7 @@ namespace RSACrypto
 
   public partial class MainForm : Form
   {
-  internal const string VersionDate = "1/16/2018";
+  internal const string VersionDate = "2/21/2018";
   internal const int VersionNumber = 09; // 0.9
   // private System.Threading.Mutex SingleInstanceMutex = null;
   // private bool IsSingleInstance = false;
@@ -470,6 +470,13 @@ Things I'll fix up later.
 
   }
 }
+
+
+
+
+
+
+
 
 
 
