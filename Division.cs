@@ -65,6 +65,7 @@ namespace RSACrypto
     }
 
 
+
   private void ShowStatus( string ToShow )
     {
     if( MForm == null )
@@ -72,6 +73,7 @@ namespace RSACrypto
 
     MForm.ShowStatus( ToShow );
     }
+
 
 
 
@@ -132,7 +134,9 @@ namespace RSACrypto
 
 
 
-  // This is a variation on ShortDivide that returns the remainder.
+
+  // This is a variation on ShortDivide that returns
+  // the remainder.
   // Also, DivideBy is a ulong.
   internal ulong ShortDivideRem( Integer ToDivideOriginal,
                                ulong DivideByU,
@@ -183,6 +187,7 @@ namespace RSACrypto
 
     return RemainderU;
     }
+
 
 
 
@@ -428,34 +433,63 @@ namespace RSACrypto
       return;
       }
 
-    // return LongDivide1( ToDivide, DivideBy, Quotient, Remainder );
-    // return LongDivide2( ToDivide, DivideBy, Quotient, Remainder );
+    Integer ToDivideTest2 = new Integer();
+    Integer DivideByTest2 = new Integer();
+    Integer QuotientTest2 = new Integer();
+    Integer RemainderTest2 = new Integer();
+
+    Integer ToDivideTest3 = new Integer();
+    Integer DivideByTest3 = new Integer();
+    Integer QuotientTest3 = new Integer();
+    Integer RemainderTest3 = new Integer();
+
+    ToDivideTest2.Copy( ToDivide );
+    ToDivideTest3.Copy( ToDivide );
+
+    DivideByTest2.Copy( DivideBy );
+    DivideByTest3.Copy( DivideBy );
+
+    LongDivide1( ToDivideTest2, DivideByTest2, QuotientTest2, RemainderTest2 );
+    LongDivide2( ToDivideTest3, DivideByTest3, QuotientTest3, RemainderTest3 );
     LongDivide3( ToDivide, DivideBy, Quotient, Remainder );
+
+    if( !Quotient.IsEqual( QuotientTest2 ))
+      throw( new Exception( "!Quotient.IsEqual( QuotientTest2 )" ));
+
+    if( !Quotient.IsEqual( QuotientTest3 ))
+      throw( new Exception( "!Quotient.IsEqual( QuotientTest3 )" ));
+
+    if( !Remainder.IsEqual( RemainderTest2 ))
+      throw( new Exception( "!Remainder.IsEqual( RemainderTest2 )" ));
+
+    if( !Remainder.IsEqual( RemainderTest3 ))
+      throw( new Exception( "!Remainder.IsEqual( RemainderTest3 )" ));
+
     }
 
 
 
 
-  /*
   private bool LongDivide1( Integer ToDivide,
                             Integer DivideBy,
                             Integer Quotient,
                             Integer Remainder )
     {
+    uint Digit = 0;
     Integer Test1 = new Integer();
-    int TestIndex = ToDivide.Index - DivideBy.Index;
+    int TestIndex = ToDivide.GetIndex() - DivideBy.GetIndex();
     if( TestIndex != 0 )
       {
       // Is 1 too high?
       Test1.SetDigitAndClear( TestIndex, 1 );
-      Test1.MultiplyTopOne( DivideBy );
+      IntMath.MultiplyTopOne( Test1, DivideBy );
       if( ToDivide.ParamIsGreater( Test1 ))
         TestIndex--;
 
       }
 
     Quotient.SetDigitAndClear( TestIndex, 1 );
-    Quotient.D[TestIndex] = 0;
+    Quotient.SetD( TestIndex, 0 );
     uint BitTest = 0x80000000;
     while( true )
       {
@@ -463,10 +497,16 @@ namespace RSACrypto
       for( int BitCount = 31; BitCount >= 0; BitCount-- )
         {
         Test1.Copy( Quotient );
-        Test1.D[TestIndex] |= BitTest;
-        Test1.Multiply( DivideBy );
+        Digit = (uint)Test1.GetD( TestIndex ) | BitTest;
+        Test1.SetD( TestIndex, Digit );
+        IntMath.Multiply( Test1, DivideBy );
         if( Test1.ParamIsGreaterOrEq( ToDivide ))
-          Quotient.D[TestIndex] |= BitTest; // Then keep the bit.
+          {
+          Digit = (uint)Quotient.GetD( TestIndex ) | BitTest;
+          // I want to keep this bit because it
+          // passed the test.
+          Quotient.SetD( TestIndex, Digit );
+          }
 
         BitTest >>= 1;
         }
@@ -479,7 +519,7 @@ namespace RSACrypto
       }
 
     Test1.Copy( Quotient );
-    Test1.Multiply( DivideBy );
+    IntMath.Multiply( Test1, DivideBy );
     if( Test1.IsEqual( ToDivide ) )
       {
       Remainder.SetToZero();
@@ -487,11 +527,12 @@ namespace RSACrypto
       }
 
     Remainder.Copy( ToDivide );
-    Remainder.Subtract( Test1 );
+    IntMath.Subtract( Remainder, Test1 );
+
     // Does not divide it exactly.
     return false;
     }
-    */
+
 
 
 
@@ -503,10 +544,8 @@ namespace RSACrypto
                                Integer Quotient,
                                Integer Remainder )
     {
-    // For a particular value of TestIndex, this does the
-    // for-loop to test each bit.
-    // When you're not testing you wouldn't want to be creating these
-    // and allocating the RAM for them each time it's called.
+    // For a particular value of TestIndex, this does
+    // the for-loop to test each bit.
 
     uint BitTest = 0x80000000;
     for( int BitCount = 31; BitCount >= 0; BitCount-- )
@@ -521,22 +560,26 @@ namespace RSACrypto
         continue;
         }
 
-      // Is it only doing the multiplication for the top digit?
+      TestForBits.Copy( Quotient );
+
+      // Is it only doing the multiplication for the
+      // top digit?
       if( IsTop )
         {
-        TestForBits.Copy( Quotient );
         TestForBits.SetD( TestIndex, TestForBits.GetD( TestIndex ) | BitTest );
         IntMath.MultiplyTop( TestForBits, DivideBy );
         }
       else
         {
-        TestForBits.Copy( Quotient );
         TestForBits.SetD( TestIndex, TestForBits.GetD( TestIndex ) | BitTest );
         IntMath.Multiply( TestForBits, DivideBy );
         }
 
       if( TestForBits.ParamIsGreaterOrEq( ToDivide ))
-        Quotient.SetD( TestIndex, Quotient.GetD( TestIndex ) | BitTest ); // Keep the bit.
+        {
+        // It passed the test, so keep the bit.
+        Quotient.SetD( TestIndex, Quotient.GetD( TestIndex ) | BitTest );
+        }
 
       BitTest >>= 1;
       }
@@ -545,9 +588,9 @@ namespace RSACrypto
 
 
 
-  /*
-  // This works like LongDivide1 except that it estimates the maximum
-  // value for the digit and the for-loop for bit testing is called
+  // This works like LongDivide1 except that it
+  // estimates the maximum value for the digit and
+  // the for-loop for bit testing is called
   // as a separate function.
   private bool LongDivide2( Integer ToDivide,
                             Integer DivideBy,
@@ -555,36 +598,39 @@ namespace RSACrypto
                             Integer Remainder )
     {
     Integer Test1 = new Integer();
-    int TestIndex = ToDivide.Index - DivideBy.Index;
+    int TestIndex = ToDivide.GetIndex() - DivideBy.GetIndex();
     // See if TestIndex is too high.
     if( TestIndex != 0 )
       {
       // Is 1 too high?
       Test1.SetDigitAndClear( TestIndex, 1 );
-      Test1.MultiplyTopOne( DivideBy );
+      IntMath.MultiplyTopOne( Test1, DivideBy );
       if( ToDivide.ParamIsGreater( Test1 ))
         TestIndex--;
+
       }
 
-    // If you were multiplying 99 times 97 you'd get 9,603 and the upper
-    // two digits [96] are used to find the MaxValue.  But if you were multiply
-    // 12 * 13 you'd have 156 and only the upper one digit is used to find
-    // the MaxValue.
-    // Here it checks if it should use one digit or two:
+    // If you were multiplying 99 times 97 you'd get
+    // 9,603 and the upper two digits [96] are used
+    // to find the MaxValue.  But if you multiply
+    // 12 * 13 you'd have 156 and only the upper one
+    // digit is used to find the MaxValue.
+    // Here it checks if it should use one digit or
+    // two:
     ulong MaxValue;
-    if( (ToDivide.Index - 1) > (DivideBy.Index + TestIndex) )
+    if( (ToDivide.GetIndex() - 1) > (DivideBy.GetIndex() + TestIndex) )
       {
-      MaxValue = ToDivide.D[ToDivide.Index];
+      MaxValue = ToDivide.GetD( ToDivide.GetIndex());
       }
     else
       {
-      MaxValue = ToDivide.D[ToDivide.Index] << 32;
-      MaxValue |= ToDivide.D[ToDivide.Index - 1];
+      MaxValue = ToDivide.GetD( ToDivide.GetIndex() ) << 32;
+      MaxValue |= ToDivide.GetD( ToDivide.GetIndex() - 1 );
       }
 
-    MaxValue = MaxValue / DivideBy.D[DivideBy.Index];
+    MaxValue = MaxValue / DivideBy.GetD( DivideBy.GetIndex() );
     Quotient.SetDigitAndClear( TestIndex, 1 );
-    Quotient.D[TestIndex] = 0;
+    Quotient.SetD( TestIndex, 0 );
     TestDivideBits( MaxValue,
                     true,
                     TestIndex,
@@ -596,9 +642,9 @@ namespace RSACrypto
     if( TestIndex == 0 )
       {
       Test1.Copy( Quotient );
-      Test1.Multiply( DivideBy );
+      IntMath.Multiply( Test1, DivideBy );
       Remainder.Copy( ToDivide );
-      Remainder.Subtract( Test1 );
+      IntMath.Subtract( Remainder, Test1 );
       ///////////////
       if( DivideBy.ParamIsGreater( Remainder ))
         throw( new Exception( "Remainder > DivideBy in LongDivide2()." ));
@@ -614,18 +660,19 @@ namespace RSACrypto
     TestIndex--;
     while( true )
       {
-      // This remainder is used the same way you do long division
-      // with paper and pen and you keep working with a remainder
-      // until the remainder is reduced to something smaller than
-      // DivideBy.  You look at the remainder to estimate
-      // your next quotient digit.
+      // This remainder is used the same way you do
+      // long division with paper and pen and you
+      // keep working with a remainder until the
+      // remainder is reduced to something smaller
+      // than DivideBy.  You look at the remainder
+      // to estimate your next quotient digit.
       Test1.Copy( Quotient );
-      Test1.Multiply( DivideBy );
+      IntMath.Multiply( Test1, DivideBy );
       Remainder.Copy( ToDivide );
-      Remainder.Subtract( Test1 );
-      MaxValue = Remainder.D[Remainder.Index] << 32;
-      MaxValue |= Remainder.D[Remainder.Index - 1];
-      MaxValue = MaxValue / DivideBy.D[DivideBy.Index];
+      IntMath.Subtract( Remainder, Test1 );
+      MaxValue = Remainder.GetD( Remainder.GetIndex()) << 32;
+      MaxValue |= Remainder.GetD( Remainder.GetIndex() - 1 );
+      MaxValue = MaxValue / DivideBy.GetD( DivideBy.GetIndex());
       TestDivideBits( MaxValue,
                       false,
                       TestIndex,
@@ -641,12 +688,12 @@ namespace RSACrypto
       }
 
     Test1.Copy( Quotient );
-    Test1.Multiply( DivideBy );
+    IntMath.Multiply( Test1, DivideBy );
     Remainder.Copy( ToDivide );
-    Remainder.Subtract( Test1 );
+    IntMath.Subtract( Remainder, Test1 );
     //////////////////////////////
     if( DivideBy.ParamIsGreater( Remainder ))
-      throw( new Exception( "LgRemainder > LgDivideBy in LongDivide2()." ));
+      throw( new Exception( "Remainder > DivideBy in LongDivide2()." ));
 
     ////////////////////////////////
     if( Remainder.IsZero() )
@@ -655,19 +702,20 @@ namespace RSACrypto
       return false;
 
     }
-  */
 
 
 
-    // If you multiply the numerator and the denominator by the same amount
-    // then the quotient is still the same.  By shifting left (multiplying by twos)
-    // the MaxValue upper limit is more accurate.
-    // This is called normalization.
+
+  // If you multiply the numerator and the denominator
+  // by the same amount then the quotient is still
+  // the same.  By shifting left (multiplying by twos)
+  // the MaxValue upper limit is more accurate.
+  // This is called normalization.
   internal int FindShiftBy( ulong ToTest )
     {
     int ShiftBy = 0;
-    // If it's not already shifted all the way over to the left,
-    // shift it all the way over.
+    // If it's not already shifted all the way over
+    // to the left, shift it all the way over.
     for( int Count = 0; Count < 32; Count++ )
       {
       if( (ToTest & 0x80000000) != 0 )
@@ -755,14 +803,16 @@ namespace RSACrypto
     if( TestForDivide1.ParamIsGreaterOrEq( ToDivide ))
       {
       // ToMatchExactCount++;
-      // Most of the time (roughly 5 out of every 6 times)
-      // this MaxValue estimate is exactly right:
+      // Most of the time (roughly 5 out of every 6
+      // times) this MaxValue estimate is exactly
+      // right:
       Quotient.SetD( TestIndex, MaxValue );
       }
     else
       {
-      // MaxValue can't be zero here. If it was it would
-      // already be low enough before it got here.
+      // MaxValue can't be zero here. If it was it
+      // would already be low enough before it got
+      // here.
       MaxValue--;
       if( MaxValue == 0 )
         throw( new Exception( "After decrement: MaxValue is zero in LongDivide3()." ));
@@ -777,9 +827,11 @@ namespace RSACrypto
         }
       else
         {
-        // TestDivideBits is done as a last resort, but it's rare.
-        // But it does at least limit it to a worst case scenario
-        // of trying 32 bits, rather than 4 billion or so decrements.
+        // TestDivideBits is done as a last resort,
+        // but it's rare.  But it does at least limit
+        // it to a worst case scenario of trying 32
+        // bits, rather than 4 billion or so
+        // decrements.
         TestDivideBits( MaxValue,
                         true,
                         TestIndex,
@@ -804,8 +856,8 @@ namespace RSACrypto
       IntMath.Multiply( TestForDivide1, DivideByKeep );
       Remainder.Copy( ToDivideKeep );
       IntMath.Subtract( Remainder, TestForDivide1 );
-      //if( DivideByKeep.ParamIsGreater( Remainder ))
-        // throw( new Exception( "Remainder > DivideBy in LongDivide3()." ));
+      if( DivideByKeep.ParamIsGreater( Remainder ))
+        throw( new Exception( "Remainder > DivideBy in LongDivide3()." ));
 
       return;
       }
@@ -817,8 +869,10 @@ namespace RSACrypto
       TestForDivide1.Copy( Quotient );
       // First Multiply() for each digit.
       IntMath.Multiply( TestForDivide1, DivideBy );
-      // if( ToDivide.ParamIsGreater( TestForDivide1 ))
-      //   throw( new Exception( "Problem here in LongDivide3()." ));
+
+      if( ToDivide.ParamIsGreater( TestForDivide1 ))
+        throw( new Exception( "Problem here in LongDivide3()." ));
+
       Remainder.Copy( ToDivide );
       IntMath.Subtract( Remainder, TestForDivide1 );
       MaxValue = Remainder.GetD( Remainder.GetIndex()) << 32;
@@ -882,8 +936,9 @@ namespace RSACrypto
     IntMath.Multiply( TestForDivide1, DivideByKeep );
     Remainder.Copy( ToDivideKeep );
     IntMath.Subtract( Remainder, TestForDivide1 );
-    // if( DivideByKeep.ParamIsGreater( Remainder ))
-      // throw( new Exception( "Remainder > DivideBy in LongDivide3()." ));
+    if( DivideByKeep.ParamIsGreater( Remainder ))
+      throw( new Exception( "Remainder > DivideBy in LongDivide3()." ));
+
     }
 
 
@@ -891,5 +946,14 @@ namespace RSACrypto
 
   }
 }
+
+
+
+
+
+
+
+
+
 
 
