@@ -66,7 +66,15 @@ namespace RSACrypto
   private Integer SqrtXPartR2 = new Integer();
   private Integer SqrtXPartTwoB = new Integer();
   private uint[] PrimeArray;
-  internal const int PrimeArrayLength = 1024 * 16;
+
+  // PrimeArrayLength is used when testing small
+  // prime values when testing if a number is prime.
+  // There would be an optimum length for this,
+  // because following this test is the Fermat
+  // primality test, which takes a lot more
+  // computation.
+  internal const int PrimeArrayLength = 1024 * 32;
+
   private bool Cancelled = false;
 
 
@@ -209,7 +217,7 @@ namespace RSACrypto
     }
 
 
-
+/*
   internal ulong GetSumOfPrimesUpToAndIncluding( int UpTo )
     {
     if( UpTo >= PrimeArrayLength )
@@ -221,7 +229,7 @@ namespace RSACrypto
 
     return Sum;
     }
-
+*/
 
 
   internal void SubtractULong( Integer Result, ulong ToSub )
@@ -577,9 +585,10 @@ namespace RSACrypto
     int CountTo = Result.GetIndex();
     for( int Column = 0; Column <= CountTo; Column++ )
       {
-      M[Column, 0] = B0 * Result.GetD( Column );
+      ulong Digit = Result.GetD( Column );
+      M[Column, 0] = B0 * Digit;
       // Column + 1 and Row is 1, so it's just like pen and paper.
-      M[Column + 1, 1] = B1 * Result.GetD( Column );
+      M[Column + 1, 1] = B1 * Digit;
       }
 
     // Since B1 is not zero, the index is set one higher.
@@ -602,8 +611,9 @@ namespace RSACrypto
       // There's only the two rows for this.
       for( int Row = 0; Row <= 1; Row++ )
         {
-        TotalRight += M[Column, Row] & 0xFFFFFFFF;
-        TotalLeft += M[Column, Row] >> 32;
+        ulong MValue = M[Column, Row];
+        TotalRight += MValue & 0xFFFFFFFF;
+        TotalLeft += MValue >> 32;
         }
 
       TotalRight += Carry;
@@ -1156,18 +1166,21 @@ namespace RSACrypto
     if( TotalIndex >= Integer.DigitArraySize )
       throw( new Exception( "MultiplyTop() overflow." ));
 
-    // Just like Multiply() except that all the other rows are zero:
-    for( int Column = 0; Column <= ToMul.GetIndex(); Column++ )
-      M[Column + Result.GetIndex(), Result.GetIndex()] = Result.GetD( Result.GetIndex() ) * ToMul.GetD( Column );
+    // Just like Multiply() except that all the other
+    // rows are zero:
+    int ToMulIndex = ToMul.GetIndex();
+    int ResultIndex = Result.GetIndex();
+    for( int Column = 0; Column <= ToMulIndex; Column++ )
+      M[Column + ResultIndex, ResultIndex] = Result.GetD( ResultIndex ) * ToMul.GetD( Column );
 
-    for( int Column = 0; Column < Result.GetIndex(); Column++ )
+    for( int Column = 0; Column < ResultIndex; Column++ )
       Result.SetD( Column, 0 );
 
     ulong Carry = 0;
-    for( int Column = 0; Column <= ToMul.GetIndex(); Column++ )
+    for( int Column = 0; Column <= ToMulIndex; Column++ )
       {
-      ulong Total = M[Column + Result.GetIndex(), Result.GetIndex()] + Carry;
-      Result.SetD( Column + Result.GetIndex(), Total & 0xFFFFFFFF );
+      ulong Total = M[Column + ResultIndex, ResultIndex] + Carry;
+      Result.SetD( Column + ResultIndex, Total & 0xFFFFFFFF );
       Carry = Total >> 32;
       }
 
@@ -1192,9 +1205,10 @@ namespace RSACrypto
 
 
 
-  // This is another optimization.  This is used when the top digit
-  // is 1 and all of the other digits are zero.
-  // This is effectively just a shift-left operation.
+  // This is another optimization.  This is used
+  // when the top digit is 1 and all of the other
+  // digits are zero.  This is effectively just a
+  // shift-left operation.
   internal void MultiplyTopOne( Integer Result, Integer ToMul )
     {
     // try
@@ -1203,14 +1217,17 @@ namespace RSACrypto
     if( TotalIndex >= Integer.DigitArraySize )
       throw( new Exception( "MultiplyTopOne() overflow." ));
 
-    for( int Column = 0; Column <= ToMul.GetIndex(); Column++ )
-      Result.SetD( Column + Result.GetIndex(), ToMul.GetD( Column ));
+    int ToMulIndex = ToMul.GetIndex();
+    int ResultIndex = Result.GetIndex();
+    for( int Column = 0; Column <= ToMulIndex; Column++ )
+      Result.SetD( Column + ResultIndex, ToMul.GetD( Column ));
 
-    for( int Column = 0; Column < Result.GetIndex(); Column++ )
+    for( int Column = 0; Column < ResultIndex; Column++ )
       Result.SetD( Column, 0 );
 
     // No Carrys need to be done.
     Result.SetIndex( TotalIndex );
+
     /*
     }
     catch( Exception ) // Except )
@@ -1222,10 +1239,11 @@ namespace RSACrypto
 
 
 
-  // Finding the square root of a number is similar to division since
-  // it is a search algorithm.  The TestSqrtBits method shown next is
-  // very much like TestDivideBits().  It works the same as
-  // FindULSqrRoot(), but on a bigger scale.
+  // Finding the square root of a number is similar
+  // to division since it is a search algorithm.
+  //  The TestSqrtBits method shown next is very
+  // much like TestDivideBits().  It works the same
+  // as FindULSqrRoot(), but on a bigger scale.
   /*
   private void TestSqrtBits( int TestIndex, Integer Square, Integer SqrRoot )
     {
@@ -1246,14 +1264,17 @@ namespace RSACrypto
 
 
 
-  // In the SquareRoot() method SqrRoot.Index is half of Square.Index.
-  // Compare this to the Square() method where the Carry might or
-  // might not increment the index to an odd number.  (So if the Index
-  // was 5 its square root would have an Index of 5 / 2 = 2.)
-  // The SquareRoot1() method uses FindULSqrRoot() either to find the
-  // whole answer, if it's a small number, or it uses it to find the
-  // top part.  Then from there it goes on to a bit by bit search
-  // with TestSqrtBits().
+  // In the SquareRoot() method SqrRoot.Index is half
+  // of Square.Index.  Compare this to the Square()
+  // method where the Carry might or might not
+  // increment the index to an odd number.  (So if
+  // the Index was 5 its square root would have an
+  // Index of 5 / 2 = 2.)
+  // The SquareRoot1() method uses FindULSqrRoot()
+  // either to find the whole answer, if it's a
+  // small number, or it uses it to find the top
+  // part.  Then from there it goes on to a bit by
+  // bit search with TestSqrtBits().
   public bool SquareRoot( Integer Square, Integer SqrRoot )
     {
     ulong ToMatch;
@@ -1734,4 +1755,7 @@ namespace RSACrypto
 
   }
 }
+
+
+
 
